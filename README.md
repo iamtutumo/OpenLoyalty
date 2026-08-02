@@ -5,6 +5,7 @@
 </p>
 
 <p align="center">
+  <a href="#deployment">Deployment</a> •
   <a href="#quick-start">Quick Start</a> •
   <a href="#api-overview">API Docs</a> •
   <a href="backend/doc/index.rst">Technical Docs</a> •
@@ -20,6 +21,155 @@ Nayo is a **headless, API-first loyalty platform** designed for innovators and v
 Unlike old-fashioned, monolithic loyalty software, Nayo provides a **composable loyalty engine** that integrates seamlessly with any tech stack. Whether you're running a custom e-commerce platform, a CRM system, a POS network, or **Odoo ERP**, the Nayo API slots in as your dedicated loyalty logic engine — without replacing any existing infrastructure.
 
 **"Nayo"** means *"You have it"* or *"With it"* — because with Nayo, you have everything you need to build powerful loyalty programs.
+
+---
+
+## Deployment
+
+Get Nayo running in minutes. Choose the path that fits your environment.
+
+### Option 1: Docker (Fastest — 3 commands)
+
+```bash
+git clone https://github.com/iamtutumo/OpenLoyalty.git nayo
+cd nayo
+make setup
+```
+
+That's it. `make setup` starts all containers, initializes the database, and prints your access URLs:
+
+| Service | URL |
+|---|---|
+| Admin Panel | http://nayo.localhost:8182 |
+| Customer Panel | http://nayo.localhost:8183 |
+| Merchant Panel | http://nayo.localhost:8184 |
+| REST API | http://nayo.localhost |
+| API Documentation | http://nayo.localhost/doc |
+
+Default login: **admin** / **open** (change immediately after first login)
+
+> First time? Add `127.0.0.1 nayo.localhost` to your `/etc/hosts` or run `make update-hosts`.
+
+### Option 2: Docker Compose (Manual Steps)
+
+```bash
+git clone https://github.com/iamtutumo/OpenLoyalty.git nayo
+cd nayo/docker
+
+# 1. Configure environment
+cp .env .env.local
+# Edit .env.local — set strong POSTGRES_PASSWORD and APP_DB_PASSWORD
+
+# 2. Start services
+docker-compose up -d
+
+# 3. Initialize database and generate JWT keys
+docker-compose exec -T php phing setup
+docker-compose exec -T php phing generate-jwt-keys
+
+# 4. Clear cache
+docker-compose exec -T php bin/console cache:clear
+```
+
+### Option 3: Production Deployment
+
+For staging and production, follow the full guide:
+
+```bash
+# 1. Clone and configure
+git clone https://github.com/iamtutumo/OpenLoyalty.git nayo
+cd nayo
+cp docker/.env docker/.env.production
+
+# 2. Edit docker/.env.production with your settings:
+#    - Strong database password
+#    - Real SMTP credentials
+#    - Production URLs (ADMIN_URL, CUSTOMER_URL, MERCHANT_URL)
+
+# 3. Build and deploy
+docker-compose -f docker/docker-compose.prod.yml --env-file docker/.env.production up -d
+
+# 4. Initialize
+docker-compose -f docker/docker-compose.prod.yml exec -T php phing setup
+docker-compose -f docker/docker-compose.prod.yml exec -T php phing generate-jwt-keys
+
+# 5. Configure SSL (Let's Encrypt)
+sudo certbot certonly --standalone -d nayo.yourdomain.com
+
+# 6. Verify
+curl https://nayo.yourdomain.com/api/healthcheck
+```
+
+### Option 4: Kubernetes
+
+```bash
+# 1. Create namespace and secrets
+kubectl create namespace nayo
+kubectl create secret generic nayo-db-credentials \
+  --from-literal=username=nayo \
+  --from-literal=password=<strong-password> -n nayo
+
+# 2. Deploy
+kubectl apply -f kubernetes/storage.yml -n nayo
+kubectl apply -f kubernetes/config.yml -n nayo
+kubectl apply -f kubernetes/deployment.yml -n nayo
+
+# 3. Verify
+kubectl get pods -n nayo
+```
+
+### Useful Makefile Commands
+
+| Command | What it does |
+|---|---|
+| `make help` | List all available commands |
+| `make setup` | First-time setup (start + init DB) |
+| `make run` | Start all services |
+| `make stop` | Stop all services |
+| `make logs` | Tail logs in real-time |
+| `make shell` | Open shell in PHP container |
+| `make db-shell` | Open PostgreSQL shell |
+| `make test` | Run all tests |
+| `make backup` | Dump database to `backups/` |
+| `make restore BACKUP_FILE=path` | Restore from backup |
+| `make health-check` | Check all service health |
+| `make deploy` | Deploy to production |
+| `make cache-clear` | Clear Symfony cache |
+| `make jwt-keys` | Regenerate JWT keys |
+| `make find-credentials` | Scan for hardcoded secrets |
+| `make odoo-sync` | Sync customers from Odoo |
+
+### With Odoo
+
+If your merchants run Odoo, connect Nayo in two steps:
+
+```python
+# 1. In Odoo, set system parameters:
+#    nayo.api_url   = http://your-nayo-instance.com
+#    nayo.api_key   = <your-admin-api-token>
+
+# 2. Push a transaction from Odoo
+import requests
+requests.post(f"{NAYO_URL}/api/transaction", json={
+    "documentNumber": sale_order.name,
+    "documentType": "sell",
+    "purchaseDate": sale_order.date_order.isoformat(),
+    "customerLoyaltyCardNumber": partner.loyalty_card_number,
+    "items": [{"sku": p.default_code, "name": p.name,
+               "quantity": l.product_uom_qty, "grossValue": l.price_total}
+              for l in sale_order.order_line for p in [l.product_id]],
+    "summary": {"grossValue": sale_order.amount_total}
+}, headers={"Authorization": f"Bearer {API_KEY}"})
+```
+
+### Further Reading
+
+| Guide | Description |
+|---|---|
+| [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) | Full production deployment: Docker, K8s, SSL, backups, CI/CD, scaling |
+| [ODOO_INTEGRATION_GUIDE.md](ODOO_INTEGRATION_GUIDE.md) | Deep Odoo integration: API-based, module-based, webhooks, POS, eCommerce |
+| [Efficent docker.txt](Efficent%20docker.txt) | Docker best practices: layer caching, health checks, resource limits |
+| [QUICK_FIX.sql](QUICK_FIX.sql) | Common database fixes, index creation, health diagnostics |
 
 ---
 
