@@ -1,4 +1,57 @@
+# Version control
 .git
-.vagrant
+.gitignore
+
+# IDE and editor files
 .idea
-kubernetes
+.vscode
+*.swp
+*.swo
+*~
+
+# Vagrant
+.vagrant
+Vagrantfile
+bootstrap.sh
+
+# Kubernetes manifests (not needed in Docker image)
+kubernetes/
+
+# Documentation (not needed at runtime)
+backend/doc
+backend/tests
+*.md
+
+# CI/CD configs
+.travis.yml
+.gitlab-ci.yml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Node modules (built separately in frontend container)
+frontend/node_modules
+frontend/.sass-lint.yml
+
+# Docker files (avoid recursive copies)
+docker/
+op/
+
+# Logs and temp files
+*.log
+*.tmp
+*.bak
+
+# Cache directories
+backend/var/cache
+backend/var/logs
+backend/var/tmp
+__pycache__
+*.pyc
+
+# Sensitive files
+*.pem
+*.key
+.env.local
+.env.*.local
