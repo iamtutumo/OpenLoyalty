@@ -1,0 +1,603 @@
+{
+  "info": {
+    "name": "Nayo Loyalty API",
+    "description": "Complete API collection for the Nayo Loyalty Platform.\n\nCovers authentication, member management, points, tiers, campaigns, rewards, segments, transactions, custom events, referrals, and analytics.\n\nBase URL: http://nayo.localhost",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "nayo-loyalty-api-collection"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://nayo.localhost",
+      "type": "string"
+    },
+    {
+      "key": "admin_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "member_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "admin_username",
+      "value": "admin",
+      "type": "string"
+    },
+    {
+      "key": "admin_password",
+      "value": "open",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{admin_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "01 - Authentication",
+      "item": [
+        {
+          "name": "Get Admin Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.token) {",
+                  "    pm.collectionVariables.set('admin_token', jsonData.token);",
+                  "    pm.test('Admin token received', function() {",
+                  "        pm.expect(jsonData.token).to.be.a('string');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/token/admin",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"_username\": \"{{admin_username}}\",\n  \"_password\": \"{{admin_password}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Member Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.token) {",
+                  "    pm.collectionVariables.set('member_token', jsonData.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/token/member",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"_username\": \"member@example.com\",\n  \"_password\": \"member_password\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Refresh Admin Token",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "url": "{{base_url}}/api/token/admin/refresh",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{admin_token}}\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - Health Check",
+      "item": [
+        {
+          "name": "System Health",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/healthcheck",
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "Application Version",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/version",
+            "auth": { "type": "noauth" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - Members",
+      "item": [
+        {
+          "name": "List Members",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/member?page=1&perPage=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "member"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "perPage", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Register Member",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/member/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Doe\",\n  \"email\": \"jane.doe@example.com\",\n  \"phone\": \"+256700000000\",\n  \"loyaltyCardNumber\": \"LOY-2026-001\",\n  \"country\": \"UG\",\n  \"city\": \"Kampala\",\n  \"agreeForCommercialCommunication\": true,\n  \"agreeForTermsAndConditions\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Member Details",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/member/{{member_id}}"
+          }
+        },
+        {
+          "name": "Update Member",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/member/{{member_id}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Doe-Updated\",\n  \"phone\": \"+256700111222\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Member Loyalty Status",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/member/{{member_id}}/loyalty"
+          }
+        },
+        {
+          "name": "Activate Member",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/member/{{member_id}}/activate"
+          }
+        },
+        {
+          "name": "Deactivate Member",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/member/{{member_id}}/deactivate"
+          }
+        },
+        {
+          "name": "Anonymize Member (GDPR)",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/member/{{member_id}}/anonymize"
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - Points / Units",
+      "item": [
+        {
+          "name": "List Point Transfers",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/points?page=1&perPage=10"
+          }
+        },
+        {
+          "name": "Add Points (Earn)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/points/transfer",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"memberId\": \"{{member_id}}\",\n  \"value\": 100,\n  \"type\": \"add\",\n  \"comment\": \"Purchase at POS #1234\",\n  \"issuer\": \"admin\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Spend Points (Burn)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/points/spend",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"memberId\": \"{{member_id}}\",\n  \"value\": 50,\n  \"comment\": \"Redeemed reward #5678\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Transfer Points Between Members",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/points/transfer/member",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fromMemberId\": \"{{member_id}}\",\n  \"toMemberId\": \"{{member_id_2}}\",\n  \"value\": 25,\n  \"comment\": \"Referral bonus transfer\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Block Points",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/points/block",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"memberId\": \"{{member_id}}\",\n  \"value\": 30,\n  \"comment\": \"Pending reward redemption\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Cancel Points Transfer",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/points/transfer/{{transfer_id}}/cancel"
+          }
+        },
+        {
+          "name": "Get Points Histogram",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/points/histogram"
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 - Tiers",
+      "item": [
+        {
+          "name": "List Tiers",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/tier"
+          }
+        },
+        {
+          "name": "Create Tier",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/tier",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Gold\",\n  \"conditionValue\": 1000,\n  \"minOrder\": 0,\n  \"reward\": {\n    \"name\": \"Gold Welcome Bonus\",\n    \"value\": 500,\n    \"type\": \"points\"\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "Assign Member to Tier",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/member/{{member_id}}/tier",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tierId\": \"{{tier_id}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Member's Current Tier",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/member/{{member_id}}/tier"
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 - Campaigns",
+      "item": [
+        {
+          "name": "List Campaigns",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/campaign"
+          }
+        },
+        {
+          "name": "Create Coupon Campaign",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/campaign",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Summer Sale 2026\",\n  \"description\": \"20% off all summer items for Gold tier members\",\n  \"campaignType\": \"coupon\",\n  \"coupon\": {\n    \"value\": 20,\n    \"type\": \"percentage\"\n  },\n  \"activityFrom\": \"2026-06-01T00:00:00+03:00\",\n  \"activityTo\": \"2026-08-31T23:59:59+03:00\",\n  \"target\": {\n    \"type\": \"segment\",\n    \"segmentId\": \"{{segment_id}}\"\n  },\n  \"limit\": {\n    \"active\": true,\n    \"limit\": 1000,\n    \"limitPerUser\": 1\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "Simulate Campaign Results",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/campaign/{{campaign_id}}/simulate"
+          }
+        },
+        {
+          "name": "Get Campaign Leaderboard",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/campaign/{{campaign_id}}/leaderboard"
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 - Rewards",
+      "item": [
+        {
+          "name": "List Rewards",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/reward"
+          }
+        },
+        {
+          "name": "Create Reward",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/reward",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Free Coffee\",\n  \"description\": \"Redeem for one free coffee at any branch\",\n  \"costInPoints\": 500,\n  \"rewardType\": \"coupon\",\n  \"active\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Buy Reward (Redeem)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/reward/{{reward_id}}/buy",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"memberId\": \"{{member_id}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Member's Available Rewards",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/member/{{member_id}}/rewards"
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 - Transactions",
+      "item": [
+        {
+          "name": "List Transactions",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/transaction"
+          }
+        },
+        {
+          "name": "Register Transaction (POS / Odoo)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/transaction",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documentNumber\": \"SO-2026-001\",\n  \"documentType\": \"sell\",\n  \"purchaseDate\": \"2026-08-02T14:30:00+03:00\",\n  \"purchasePlace\": \"Kampala Central\",\n  \"customerLoyaltyCardNumber\": \"LOY-2026-001\",\n  \"posId\": \"pos-001\",\n  \"items\": [\n    {\n      \"sku\": \"SKU-001\",\n      \"name\": \"Product A\",\n      \"quantity\": 2,\n      \"grossValue\": 50000,\n      \"category\": \"Electronics\",\n      \"maker\": \"Brand X\"\n    },\n    {\n      \"sku\": \"SKU-002\",\n      \"name\": \"Product B\",\n      \"quantity\": 1,\n      \"grossValue\": 25000,\n      \"category\": \"Accessories\"\n    }\n  ],\n  \"summary\": {\n    \"grossValue\": 125000\n  }\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 - Segments",
+      "item": [
+        {
+          "name": "List Segments",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/segment"
+          }
+        },
+        {
+          "name": "Create Segment",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/segment",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"VIP Customers - Uganda\",\n  \"description\": \"Members in Uganda with Gold tier or higher\",\n  \"parts\": [\n    {\n      \"type\": \"attributes\",\n      \"criteria\": {\n        \"country\": \"UG\",\n        \"active\": true\n      }\n    },\n    {\n      \"type\": \"tier\",\n      \"criteria\": {\n        \"tierName\": \"Gold\"\n      }\n    }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Segment Members",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/segment/{{segment_id}}/members"
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 - Custom Events (Odoo Webhooks)",
+      "item": [
+        {
+          "name": "List Custom Event Schemas",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/event/schema"
+          }
+        },
+        {
+          "name": "Create Event Schema",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/event/schema",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"odoo_invoice_paid\",\n  \"description\": \"Triggered when an Odoo invoice is marked as paid\",\n  \"fieldsSchema\": {\n    \"invoice_number\": { \"type\": \"string\", \"required\": true },\n    \"amount\": { \"type\": \"number\", \"required\": true },\n    \"customer_email\": { \"type\": \"string\", \"required\": true },\n    \"odoo_id\": { \"type\": \"string\", \"required\": false }\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "Trigger Custom Event",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/event",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"odoo_invoice_paid\",\n  \"memberId\": \"{{member_id}}\",\n  \"data\": {\n    \"invoice_number\": \"INV-2026-001\",\n    \"amount\": 150000,\n    \"customer_email\": \"jane.doe@example.com\",\n    \"odoo_id\": \"42\"\n  }\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 - Referrals",
+      "item": [
+        {
+          "name": "List Referrals",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/referral"
+          }
+        },
+        {
+          "name": "Create Referral",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/referral",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"referrerId\": \"{{member_id}}\",\n  \"referredEmail\": \"friend@example.com\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "12 - Analytics",
+      "item": [
+        {
+          "name": "Members Analytics",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/analytics/members"
+          }
+        },
+        {
+          "name": "Transactions Analytics",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/analytics/transactions"
+          }
+        },
+        {
+          "name": "Tiers Analytics",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/analytics/tiers"
+          }
+        },
+        {
+          "name": "Campaigns Analytics",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/analytics/campaigns"
+          }
+        },
+        {
+          "name": "Referrals Analytics",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/analytics/referrals"
+          }
+        }
+      ]
+    },
+    {
+      "name": "13 - Settings & Admin",
+      "item": [
+        {
+          "name": "Get Settings",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/settings"
+          }
+        },
+        {
+          "name": "Update Settings",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/settings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currency\": \"UGX\",\n  \"timezone\": \"Africa/Nairobi\",\n  \"lang\": \"en\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List Admins",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/admin"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,200 @@
+================================================================================
+NAYO - EFFICIENT DOCKER SETUP GUIDE
+================================================================================
+
+This document contains best practices for running Nayo efficiently in Docker
+for development, staging, and production environments.
+
+--------------------------------------------------------------------------------
+1. BASE IMAGE OPTIMIZATION
+--------------------------------------------------------------------------------
+
+Use multi-stage builds to reduce final image size:
+
+  Stage 1 (builder): Install dependencies, compile assets
+  Stage 2 (runtime): Copy only what is needed for runtime
+
+Recommended base images:
+  - PHP-FPM:   php:7.4-fpm-alpine     (~80MB vs ~400MB for debian)
+  - Nginx:     nginx:1.25-alpine      (~25MB)
+  - PostgreSQL: postgres:15-alpine    (~80MB vs ~380MB)
+  - Elasticsearch: elasticsearch:7.17.10 (~500MB, no alpine available)
+
+--------------------------------------------------------------------------------
+2. LAYER CACHING STRATEGY
+--------------------------------------------------------------------------------
+
+Order Dockerfile instructions from least to most frequently changing:
+
+  1. FROM (base image)
+  2. System packages (rarely change)
+  3. PHP extensions (rarely change)
+  4. composer.json / composer.lock (change when dependencies update)
+  5. RUN composer install --no-dev --optimize-autoloader
+  6. COPY application source (changes on every commit)
+
+This ensures composer install is cached unless dependencies actually change.
+
+--------------------------------------------------------------------------------
+3. DOCKER COMPOSE PROFILES
+--------------------------------------------------------------------------------
+
+Use profiles to control which services start:
+
+  docker compose --profile dev up      # Full dev environment
+  docker compose --profile prod up     # Production services only
+  docker compose --profile test up     # Test environment
+
+Example service profiles:
+  - php, nginx, db, elk: core (always started)
+  - mailhog: dev profile only
+  - redis: prod profile only
+  - kibana: monitoring profile
+
+--------------------------------------------------------------------------------
+4. VOLUME MOUNTS (DEVELOPMENT)
+--------------------------------------------------------------------------------
+
+For development, mount source code as volumes for hot-reload:
+
+  volumes:
+    - ./backend:/var/www/nayo
+    - ./frontend:/var/www/frontend
+
+IMPORTANT: Do NOT mount volumes in production. Copy files into the image
+during build for better performance and reproducibility.
+
+--------------------------------------------------------------------------------
+5. RESOURCE LIMITS
+--------------------------------------------------------------------------------
+
+Set memory and CPU limits to prevent one container from starving others:
+
+  services:
+    php:
+      deploy:
+        resources:
+          limits:
+            memory: 512M
+            cpus: '1.0'
+          reservations:
+            memory: 256M
+    db:
+      deploy:
+        resources:
+          limits:
+            memory: 1G
+            cpus: '1.0'
+    elk:
+      deploy:
+        resources:
+          limits:
+            memory: 2G
+            cpus: '1.5'
+
+--------------------------------------------------------------------------------
+6. HEALTH CHECKS
+--------------------------------------------------------------------------------
+
+Add health checks to all services so Docker knows when they are ready:
+
+  php:
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  db:
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nayo"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  elk:
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+--------------------------------------------------------------------------------
+7. BUILD CACHE AND REGISTRY
+--------------------------------------------------------------------------------
+
+For CI/CD pipelines:
+
+  - Use Docker BuildKit: DOCKER_BUILDKIT=1 docker build ...
+  - Use --cache-from to leverage registry cache
+  - Tag images with commit SHA and "latest"
+  - Push to container registry (Docker Hub, GitHub Container Registry, ECR)
+
+Example CI build:
+  docker buildx build \
+    --cache-from type=registry,ref=ghcr.io/iamtutumo/nayo:latest \
+    --cache-to type=inline \
+    --tag ghcr.io/iamtutumo/nayo:${COMMIT_SHA} \
+    --tag ghcr.io/iamtutumo/nayo:latest \
+    --push .
+
+--------------------------------------------------------------------------------
+8. LOGGING
+--------------------------------------------------------------------------------
+
+Configure JSON logging for all containers:
+
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+For production, consider using:
+  - Fluentd driver for centralized logging
+  - Loki + Grafana for log visualization
+  - CloudWatch Logs (AWS) or similar
+
+--------------------------------------------------------------------------------
+9. NETWORK OPTIMIZATION
+--------------------------------------------------------------------------------
+
+  - Use custom bridge networks (not default bridge)
+  - Separate frontend and backend networks for security
+  - Use DNS-based service discovery (built into Docker Compose)
+
+  networks:
+    frontend:
+      driver: bridge
+    backend:
+      driver: bridge
+      internal: true   # No external access
+
+  services:
+    nginx:
+      networks: [frontend, backend]   # Bridge between both
+    php:
+      networks: [backend]             # Only internal
+    db:
+      networks: [backend]             # Only internal
+
+--------------------------------------------------------------------------------
+10. PRODUCTION CHECKLIST
+--------------------------------------------------------------------------------
+
+  [ ] No volume mounts for source code
+  [ ] Resource limits set on all containers
+  [ ] Health checks configured
+  [ ] Secrets managed via Docker secrets or env vars (not hardcoded)
+  [ ] Images pinned to specific versions (not :latest)
+  [ ] Logging driver configured with rotation
+  [ ] TLS/SSL termination at nginx or reverse proxy
+  [ ] Database backups scheduled
+  [ ] Monitoring in place (Prometheus/Grafana or similar)
+  [ ] Restart policies set (restart: unless-stopped)
+
+================================================================================
+END OF GUIDE
+================================================================================
